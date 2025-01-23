@@ -1,0 +1,13 @@
+*,
+*::after,
+*::before {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+body {
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  background-color: rgb(120, 203, 120);
+}
