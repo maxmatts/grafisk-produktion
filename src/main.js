@@ -25,7 +25,7 @@ const aspect = {
 
 //TEXTURE LOADER
 const textureLoader = new THREE.TextureLoader();
-const texture = textureLoader.load("/rings.png");
+const texture = textureLoader.load("/bricks.png");
 
 //CUBE TEXTURE LOADER
 const cubeTextureLoader = new THREE.CubeTextureLoader();
@@ -70,9 +70,6 @@ camera.lookAt(mesh);
 
 //RENDERER
 const canvas = document.querySelector(".draw");
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true; // Optional: Add damping for smoother movement
-controls.dampingFactor = 0.1;
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -82,6 +79,9 @@ renderer.setSize(aspect.width, aspect.height);
 renderer.setAnimationLoop(animate);
 
 //OrbitControls
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; // Optional: Add damping for smoother movement
+controls.dampingFactor = 0.1;
 
 function animate(time) {
   mesh.rotation.x = time / 2000;
