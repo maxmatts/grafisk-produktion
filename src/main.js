@@ -1,91 +1,131 @@
+// 1. Imports and Constants
 import "./style.css";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
-//Resize
+// 2. Utility Functions
 
-window.addEventListener("resize", () => {
-  //Update Size
-  aspect.width = window.innerWidth;
-  aspect.height = window.innerHeight;
+//Load GLTF-file
+const LoadGLTFByPath = (scene, path) => {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader();
+    loader.load(
+      path,
+      (gltf) => {
+        scene.add(gltf.scene);
+        resolve(gltf);
+      },
+      undefined,
+      (error) => {
+        console.error("Error loading GLTF:", error);
+        reject(error);
+      }
+    );
+  });
+};
+//Update size
+const updateSize = (parentElement, camera, renderer, aspect) => {
+  const { width, height } = parentElement.getBoundingClientRect();
+  aspect.width = width;
+  aspect.height = height;
 
-  //New Aspect Ratio
-  camera.aspect = aspect.width / aspect.height;
+  camera.aspect = width / height;
   camera.updateProjectionMatrix();
 
-  //New RendererSize
-  renderer.setSize(aspect.width, aspect.height);
+  renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-});
-//SIZE
-const aspect = {
-  width: window.innerWidth,
-  height: window.innerHeight,
 };
 
-//TEXTURE LOADER
-const textureLoader = new THREE.TextureLoader();
-const texture = textureLoader.load("/bricks.png");
+// 3. Scene Setup
+const parentElement = document.querySelector(".canvas-wrapper"); // Replace with your container
+const aspect = {
+  width: parentElement.clientWidth,
+  height: parentElement.clientHeight,
+};
 
-//CUBE TEXTURE LOADER
-const cubeTextureLoader = new THREE.CubeTextureLoader();
-const envTexture = cubeTextureLoader.load([
-  "/env/cube_right.png",
-  "/env/cube_left.png",
-  "env/cube_up.png",
-  "env/cube_down.png",
-  "env/cube_back.png",
-  "env/cube_front.png",
-]);
-
-//SCENE
 const scene = new THREE.Scene();
 
-scene.background = envTexture;
-
-//LIGHTS
-const light = new THREE.AmbientLight("white");
-//const directionalLight = new THREE.DirectionalLight("skyblue", 10);
-
-//MESH
-const geometry = new THREE.TorusGeometry(0.8, 0.4, 12, 48);
-const material = new THREE.MeshStandardMaterial({ map: texture });
-//material.wireframe = true;
-material.roughness = 0.4;
-material.metalness = 0.8;
-material.envMap = envTexture;
-
-const mesh = new THREE.Mesh(geometry, material);
-scene.add(mesh);
-
-//CAMERA
 const camera = new THREE.PerspectiveCamera(
+  //FOV (Field of View)
   70,
   aspect.width / aspect.height,
+  //Near value
   0.01,
+  //Far Value
   100
 );
 camera.position.z = 4;
-camera.lookAt(mesh);
-
-//RENDERER
-const canvas = document.querySelector(".draw");
 
 const renderer = new THREE.WebGLRenderer({
-  canvas,
+  canvas: document.querySelector(".draw"),
   antialias: true,
 });
-renderer.setSize(aspect.width, aspect.height);
-renderer.setAnimationLoop(animate);
+updateSize(parentElement, camera, renderer, aspect);
 
-//OrbitControls
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true; // Optional: Add damping for smoother movement
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
 controls.dampingFactor = 0.1;
 
-function animate(time) {
+// Environment
+const cubeTextureLoader = new THREE.CubeTextureLoader();
+const envTexture = cubeTextureLoader.load([
+  "environments/cube_right.png",
+  "environments/cube_left.png",
+  "environments/cube_up.png",
+  "environments/cube_down.png",
+  "environments/cube_back.png",
+  "environments/cube_front.png",
+]);
+scene.environment = envTexture;
+scene.background = envTexture;
+
+// Lights
+const light = new THREE.AmbientLight("white");
+const directionalLight = new THREE.DirectionalLight("skyblue", 10);
+scene.add(light);
+scene.add(directionalLight);
+
+// Mesh
+const textureLoader = new THREE.TextureLoader();
+const texture = textureLoader.load("/bricks.png");
+
+const geometry = new THREE.BoxGeometry(1, 1, 1);
+const material = new THREE.MeshStandardMaterial({
+  map: texture,
+  roughness: 0.4,
+  metalness: 0.8,
+});
+const mesh = new THREE.Mesh(geometry, material);
+//scene.add(mesh);
+
+// GLTF Model
+let loadedBox = null;
+LoadGLTFByPath(scene, "models/box.gltf")
+  .then((gltf) => {
+    console.log("Model loaded successfully");
+    loadedBox = gltf.scene;
+    loadedBox.position.set(0, -1, 0);
+  })
+  .catch((error) => console.error("Error loading model:", error));
+
+// 4. Event Listeners
+window.addEventListener("resize", () =>
+  updateSize(parentElement, camera, renderer, aspect)
+);
+
+// 5. Animation and Render Loop
+const animate = (time) => {
   mesh.rotation.x = time / 2000;
   mesh.rotation.y = time / 1000;
 
-  renderer.render(scene, camera);
-}
+  // Ensure the GLTF model is loaded before applying dynamic updates
+  if (loadedBox) {
+    loadedBox.rotation.y += 0.01; // Rotate the loaded model around Y-axis
+  }
+
+  controls.update(); // Update OrbitControls
+  renderer.render(scene, camera); // Render the scene
+};
+
+renderer.setAnimationLoop(animate); // Start the animation loop
