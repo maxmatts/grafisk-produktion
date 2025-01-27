@@ -101,11 +101,23 @@ const mesh = new THREE.Mesh(geometry, material);
 
 // GLTF Model
 let loadedBox = null;
+let loadedBoxMaterial = [];
 LoadGLTFByPath(scene, "models/box.gltf")
   .then((gltf) => {
     console.log("Model loaded successfully");
     loadedBox = gltf.scene;
     loadedBox.position.set(0, -1, 0);
+    loadedBox.traverse((child) => {
+      if (child.isMesh) {
+        if (Array.isArray(child.material)) {
+          child.material.forEach((material) =>
+            loadedBoxMaterial.push(material)
+          );
+        } else if (child.material) {
+          loadedBoxMaterial.push(child.material);
+        }
+      }
+    });
   })
   .catch((error) => console.error("Error loading model:", error));
 
@@ -129,3 +141,24 @@ const animate = (time) => {
 };
 
 renderer.setAnimationLoop(animate); // Start the animation loop
+
+//Controllers
+
+const controllerButtons = document.querySelectorAll(".c-btn");
+
+controllerButtons.forEach((button) => {
+  button.addEventListener("click", (e) => {
+    if (!e.target.value) {
+      return;
+    }
+    if (e.target.value === "wireframe") {
+      loadedBoxMaterial.forEach((material) => {
+        if (material.wireframe === true) {
+          material.wireframe = false;
+        } else {
+          material.wireframe = true;
+        }
+      });
+    }
+  });
+});
